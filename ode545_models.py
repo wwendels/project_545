@@ -181,25 +181,25 @@ class Izh:
     def f0(self, x: np.array, t: float, Iext: int = 0) -> np.array:
         # f but with Iext a constant value (default 0), for plotting reference nullclines
         # separate function from f for efficiency in timestepping with f
-        x1dot = (self.fIext(t) + self.k*(x[0]-self.vr)*(x[0]-self.vt) - x[1])/self.C
+        x1dot = (Iext + self.k*(x[0]-self.vr)*(x[0]-self.vt) - x[1])/self.C
         x2dot = self.a*(self.b*(x[0]-self.vr)-x[1])
         return np.array([x1dot,x2dot])        
 
-    def df1_dx1(self, x: np.array) -> float:
+    def df1_dx1(self, x: np.array, t: float) -> float:
         # return (2*self.k*x[0]-self.vr-self.vt)/self.C
-        return self.k*((x[0]-self.vt) + (x[0]-self.vr))/self.C
+        return self.k*x[0]*((x[0]-self.vt) + (x[0]-self.vr))/self.C
 
-    def df1_dx2(self, x: np.array) -> float:
+    def df1_dx2(self, x: np.array, t: float) -> float:
         return -1.0/self.C
 
-    def df2_dx1(self, x: np.array) -> float:
+    def df2_dx1(self, x: np.array, t: float) -> float:
         return self.a*self.b
 
-    def df2_dx2(self, x: np.array) -> np.array:
+    def df2_dx2(self, x: np.array, t: float) -> np.array:
         return -self.a
 
-    def jacobian(self, x: np.array) -> np.array:
-        return np.array( [ [self.df1_dx1(x),self.df1_dx2(x)], [self.df2_dx1(x),self.df2_dx2(x)] ] )
+    def jacobian(self, x: np.array, t: float) -> np.array:
+        return np.array( [ [self.df1_dx1(x, t), self.df1_dx2(x, t)], [self.df2_dx1(x, t), self.df2_dx2(x, t)] ] )
 
     def timestepping(self, x0: np.array, dt: float, tend: float, method="RK4") -> np.array:
 

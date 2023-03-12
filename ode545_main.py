@@ -22,9 +22,12 @@ savepath_main = cwd+"/IZH_model_B/"                             # main folder to
 fmodel, xmesh, ymesh, tmesh, X0, eqtol = config.getModel(case)  # gets (detailed) input regarding model, mesh, initial value and tolerance for finding equilibria from ode2d_config
 tmesh = 1000.,0.01                                              # time mesh (different subfolders will be made for different time meshes)
 
+# xmesh = -100.0, 50.0, 100, 500, "$v$"
+# ymesh = -50.0, 300.0, 100, 500, "$u$"
+
 # ----- parameters input current function fI ----- #
 Iext = 100                                                      # input current
-tthres = 50                                                     # threshold current
+tthres = 500                                                     # threshold current
 Pulses = [[180,200,Iext],[580,600,Iext]]                        # time intervals for current pulses 
 Iref = 0                                                        # reference current
 fI_lab = 2                                                      # choice for which current function (see output section for which label corresponds to which function)
@@ -38,7 +41,7 @@ title = ""                                                      # title of the p
 
 # ===== OUTPUT ===== #
 
-savepath = savepath_main+savedir+"bla"
+savepath = savepath_main+savedir
 
 if not os.path.exists(savepath_main):
     os.mkdir(savepath_main)
@@ -60,10 +63,44 @@ else:
 
 ### algorithm
 
-print(X0)
-Xtraj = ode2d.trajectories(fmodel,X0,tmesh,method="RK4")
+Xtraj, T = functions.trajectories(fmodel(fI), X0, tmesh, method="RK4")
+# Xtraj = Xtraj.T
 
-functions.TSA(Xtraj, tmesh, savepath)
+# initialization summary plot
+n = len(Xtraj[0])                                # dimensionality of the ODE
+print(n)
+nt = len(T)
+
+Idata = np.zeros((1,nt))
+for i in range(nt):
+    Idata[0,i] = fI(T[i])
+print(Idata)
+
+for i in range(len(X0)):
+    height_ratios = [2]+[1 for i in range(n+1)]
+    print(height_ratios)
+    fig, axs = plt.subplots(n+2, 1, figsize=(12, 12), height_ratios = height_ratios) #, gridspec_kw={'height_ratios': [8, 4, 4]})
+
+    functions.plotPhasePlane(axs[0], fmodel(fI), xmesh, ymesh, Xtraj[i])
+    functions.plotTimeSeries(axs[1:n+1], Xtraj[i], T)
+    functions.plotTimeSeries(axs[n+1], Idata, T, Xlims = [-0.1*Iext, 1.1*Iext])
+
+    fig.savefig(savepath+"/analysis_X0="+str(X0[i])+"-6", bbox_inches="tight")
+    plt.close()
+
+
+
+
+# print(X0)
+# # print(fmodel)
+# Xtraj, _ = ode2d.trajectories(fmodel(fI),X0,tmesh,method="RK4")
+# for i in range(len(X0)):
+#     savelabel_TSA_i = "TSA_X0="+str(X0[i])
+#     savelabel_PPA_i = "PPA_X0="+str(X0[i])
+#     print(Xtraj[i])
+#     functions.TSA(Xtraj[i], tmesh, savepath, savelabel_TSA_i)
+#     functions.PPA(fmodel(fI),xmesh,ymesh,Xtraj[i],savepath,savelabel_PPA_i)
+#     functions.plotI(fI,tmesh, savepath, savelabel_TSA_i)
 
 # plotI = [fI, "I", [0,Iext+10]] # information for plotting regarding input current function
 # analysis.phasePlaneAnalysis(fmodel(fI),xmesh,ymesh,tmesh,X0=X0,t=tmesh[0],plot_traj=2,eqtol=eqtol,opt_plot=opt_plot,legend=False,title=title,plotI=plotI,savepath=savepath,savelabel=savelabel)
