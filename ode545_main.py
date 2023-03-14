@@ -16,11 +16,13 @@ import pysindy as ps
 
 cwd = os.getcwd()
 
+np.random.seed(11)
+
 # ===== INPUT ===== #
 
 # ----- model ----- #
 case = "FHN-A" #"IZH-B"                                                  # case label; will be searched for in the ode2d_config file
-savepath_main = cwd+"/FHN_model_A/"                             # main folder to save plots to; subfolders according to detailed settings will be made further below
+savepath_main = cwd+"/FHN_model_A_I=004_2-seed11/"                             # main folder to save plots to; subfolders according to detailed settings will be made further below
 fmodel, xmesh, ymesh, tmesh, X0, eqtol = config.getModel(case)  # gets (detailed) input regarding model, mesh, initial value and tolerance for finding equilibria from ode2d_config
 tmesh = 1000., 0.01 #05 #1                                              # time mesh (different subfolders will be made for different time meshes)
 
@@ -99,71 +101,106 @@ for i in range(len(X0)):
 # PYSINDY RECOVERY #
 ####################
 
-# # ----- training parameters ----- #
+# ----- training parameters ----- #
 
-# # general
-# X0_train = [np.array([0, 0.15])]
-# I_train = [0, 0.1]
-# # Eta = [0]
-# eta = 0
+# general
+X0_train = [np.array([0, 0.15])] #, np.array([0, 0.2])] #, np.array([0.5, 0.2])]
+I_train = [0.04] #, 0.05, 0.06] #[0] #, 0.01, 0.02]
+# Eta = [0]
+eta = 0
 
-# # SINDy
-# poly_order = 3          # highest polynomial degree
-# threshold = 0.005       # STLSQ optimizer threshold (should be >= smallest coefficient in model)
+X0_test = [np.array([0, 0.2]), np.array([0, 0.25])] #, np.array([0.5, 0.2])]
+I_test = [0] #, 0.01]
 
+# SINDy
+poly_order = 3          # highest polynomial degree
+threshold = 0.005       # STLSQ optimizer threshold (should be >= smallest coefficient in model)
+
+# ----- model training ----- #
 # X_train = []
-# for X0i in X0_train:
-#     for Ii in I_train:
-#         fIi = lambda t : model.fConstant(t,Ii)
-#         X_train_i, T = functions.trajectories(fmodel(fIi), X0i, tmesh, method="RK4")
-#         X_train.append(X_train_i.T)
+X_train = np.array([], dtype=np.int64).reshape(0,n)
+for X0i in X0_train:
+    for Ii in I_train:
+        fIi = lambda t : model.fConstant(t,Ii)
+        X_train_i, T = functions.trajectories2(fmodel(fIi), X0i, tmesh, method="RK4")
+        # X_train.append(X_train_i.T)
+        # X_train = np.concatenate(X_train,X_train_i.T)
+        # print(X_train)
+        # print(X_train_i)
+        X_train = np.vstack([X_train, X_train_i.T])
 
-
-
-
-
-
-
-
-# train model for first X0
-poly_order = 3
-threshold = 0.005
 model_ps = ps.SINDy(optimizer=ps.STLSQ(threshold=threshold), feature_library=ps.PolynomialLibrary(degree=poly_order))
-# model_ps = ps.SINDy(feature_library=ps.PolynomialLibrary(degree=poly_order))
-print(Xtraj[0].T)
-model_ps.fit(Xtraj[0].T, t=dt)
+model_ps.fit(X_train, t=dt)
 model_ps.print()
 
-# assert len(X0) > 1
+# ----- plot of reference cases (true vs. approximated) ----- #
+# height_ratios = [2]+[1 for i in range(n)]
+# fig, axs = plt.subplots(n+1, 1, figsize=(12, 12), height_ratios = height_ratios) #, gridspec_kw={'height_ratios': [8, 4, 4]})
+fig, axs = plt.subplots(n, 1, figsize=(12, 12)) #, gridspec_kw={'height_ratios': [8, 4, 4]})
 
-X0_test = [np.array([0, 0.2]), np.array([0, 0.25]), np.array([0.5, 0.2])]
-Xtest_ref, _ = functions.trajectories(fmodel(fI), X0_test, tmesh, method="RK4") # list of arrays of ndims x nt
+for X0i in X0_test:
+    for Ii in I_test:
+        print(X0i, Ii)
+        fIi = lambda t : model.fConstant(t,Ii)
+        X_test_i_ref, T = functions.trajectories2(fmodel(fIi), X0i, tmesh, method="RK4")
+        X_test_i_sim = model_ps.simulate(X0i, T).T
 
-height_ratios = [2]+[1 for i in range(n)]
-fig, axs = plt.subplots(n+1, 1, figsize=(12, 12), height_ratios = height_ratios) #, gridspec_kw={'height_ratios': [8, 4, 4]})
+        # functions.plotPhasePlane(axs[0], fmodel(fI), xmesh, ymesh, X_test_i_ref)
+        # functions.plotTimeSeries(axs[1:n+1], X_test_i_sim, T) #, plot_traj=2)
+        # functions.plotTimeSeries(axs[1:n+1], X_test_i_ref, T, plot_traj=3)
+        # functions.plotTimeSeries(axs[n+1], Idata, T, Xlims = [-0.1*Iext, 1.1*Iext])
+        functions.plotTimeSeries(axs, X_test_i_sim, T) #, plot_traj=2)
+        functions.plotTimeSeries(axs, X_test_i_ref, T, plot_traj=3)
 
-for i in range(len(X0_test)):
-    Xtest_i = model_ps.simulate(X0_test[i], T).T
-
-    functions.plotPhasePlane(axs[0], fmodel(fI), xmesh, ymesh, Xtest_ref[i])
-    functions.plotTimeSeries(axs[1:n+1], Xtest_ref[i], T) #, plot_traj=2)
-    functions.plotTimeSeries(axs[1:n+1], Xtest_i, T, plot_traj=3)
-    # functions.plotTimeSeries(axs[n+1], Idata, T, Xlims = [-0.1*Iext, 1.1*Iext])
-
-fig.savefig(savepath+"/verification-FHN-A-1"+savelabel+".png", bbox_inches="tight")
+fig.savefig(savepath+"/model-verification-FHN-A-1"+savelabel+".png", bbox_inches="tight")
 plt.close()
 
 
 
+#############################################################
 
 
 
-# Xtraj_comp = model_ps.simulate(X0[1], T)
-# fig, axs = plt.subplots(n, 1, sharex=True, figsize=(7, 9))
-# for i in range(n):
-#     axs[i].plot(T, Xtraj_comp[:, i], 'k', label='numerical derivative')
-# fig.savefig(savepath+"/prediction_X0="+str(X0[i]).replace(".","")+"-FHN-A-1.png", bbox_inches="tight")
+
+# # train model for first X0
+# poly_order = 3
+# threshold = 0.005
+# model_ps = ps.SINDy(optimizer=ps.STLSQ(threshold=threshold), feature_library=ps.PolynomialLibrary(degree=poly_order))
+# # model_ps = ps.SINDy(feature_library=ps.PolynomialLibrary(degree=poly_order))
+# print(Xtraj[0].T)
+# model_ps.fit(Xtraj[0].T, t=dt)
+# model_ps.print()
+
+# # assert len(X0) > 1
+
+# X0_test = [np.array([0, 0.2]), np.array([0, 0.25]), np.array([0.5, 0.2])]
+# Xtest_ref, _ = functions.trajectories(fmodel(fI), X0_test, tmesh, method="RK4") # list of arrays of ndims x nt
+
+# height_ratios = [2]+[1 for i in range(n)]
+# fig, axs = plt.subplots(n+1, 1, figsize=(12, 12), height_ratios = height_ratios) #, gridspec_kw={'height_ratios': [8, 4, 4]})
+
+# for i in range(len(X0_test)):
+#     Xtest_i = model_ps.simulate(X0_test[i], T).T
+
+#     functions.plotPhasePlane(axs[0], fmodel(fI), xmesh, ymesh, Xtest_ref[i])
+#     functions.plotTimeSeries(axs[1:n+1], Xtest_ref[i], T) #, plot_traj=2)
+#     functions.plotTimeSeries(axs[1:n+1], Xtest_i, T, plot_traj=3)
+#     # functions.plotTimeSeries(axs[n+1], Idata, T, Xlims = [-0.1*Iext, 1.1*Iext])
+
+# fig.savefig(savepath+"/verification-FHN-A-1"+savelabel+".png", bbox_inches="tight")
 # plt.close()
+
+
+
+
+
+
+# # Xtraj_comp = model_ps.simulate(X0[1], T)
+# # fig, axs = plt.subplots(n, 1, sharex=True, figsize=(7, 9))
+# # for i in range(n):
+# #     axs[i].plot(T, Xtraj_comp[:, i], 'k', label='numerical derivative')
+# # fig.savefig(savepath+"/prediction_X0="+str(X0[i]).replace(".","")+"-FHN-A-1.png", bbox_inches="tight")
+# # plt.close()
 
 
 

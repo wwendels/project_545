@@ -15,6 +15,15 @@ def trajectories(modelclass,X0,tmesh,method="RK4"):
 
     return X,T #X is a list!
 
+def trajectories2(modelclass,X0,tmesh,method="RK4"):
+    # extracts the states X[t] for each time t involved in the time mesh T
+
+    tend, dt = tmesh
+    T = np.arange(0,tend+dt,dt)
+    X = modelclass.timestepping(X0,dt,tend,method).T
+
+    return X,T #X is a list!
+
 
 ##########################
 # GENERAL PLOT FUNCTIONS #
