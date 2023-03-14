@@ -128,7 +128,7 @@ def getModel(case):
         xmesh = -0.5, 1.0, 30, 50, "$V$"
         ymesh = -0.05, 0.2, 30, 50, "$w$"
         tmesh = 500.,0.01
-        X0 = [np.array([0,0.15]), np.array([0,0.2])]
+        X0 = [np.array([0,0.15])] #, np.array([0,0.2])]
         eqtol = 1e-3
         model_lab = "FHN"
 
@@ -144,7 +144,7 @@ def getModel(case):
         xmesh = -0.5, 1.0, 30, 50, "$V$"
         ymesh = -0.05, 0.2, 30, 50, "$w$"
         tmesh = 500.,0.01
-        X0 = [np.array([0,0.15])]
+        X0 = [np.array([0, 0.15]), np.array([0, 0.2])]
         eqtol = 1e-3
         model_lab = "FHN"
 
@@ -164,6 +164,7 @@ def getModel(case):
         eqtol = 1e-3
         model_lab = "FHN"
 
+        # a = -0.1 #
         a = 0.1
         b = 0.01
         c = 0.1

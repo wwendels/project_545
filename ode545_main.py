@@ -22,13 +22,13 @@ cwd = os.getcwd()
 case = "FHN-A" #"IZH-B"                                                  # case label; will be searched for in the ode2d_config file
 savepath_main = cwd+"/FHN_model_A/"                             # main folder to save plots to; subfolders according to detailed settings will be made further below
 fmodel, xmesh, ymesh, tmesh, X0, eqtol = config.getModel(case)  # gets (detailed) input regarding model, mesh, initial value and tolerance for finding equilibria from ode2d_config
-tmesh = 1000.,0.01                                              # time mesh (different subfolders will be made for different time meshes)
+tmesh = 1000., 0.01 #05 #1                                              # time mesh (different subfolders will be made for different time meshes)
 
 # xmesh = -100.0, 50.0, 100, 500, "$v$"
 # ymesh = -50.0, 300.0, 100, 500, "$u$"
 
 # ----- parameters input current function fI ----- #
-Iext = 0 #100                                                      # input current
+Iext = 0.04 #100                                                      # input current
 tthres = 500                                                     # threshold current
 Pulses = [[180,200,Iext],[580,600,Iext]]                        # time intervals for current pulses 
 Iref = 0                                                        # reference current
@@ -65,7 +65,8 @@ else:
 
 ### algorithm
 
-Xtraj, T = functions.trajectories(fmodel(fI), X0, tmesh, method="RK4")
+Xtraj, T = functions.trajectories(fmodel(fI), X0, tmesh, method="RK4") # list of arrays of ndims x nt
+print(Xtraj[0].shape)
 dt = T[1] - T[0]
 # Xtraj = Xtraj.T
 
@@ -90,7 +91,7 @@ for i in range(len(X0)):
     functions.plotTimeSeries(axs[1:n+1], Xtraj[i], T)
     functions.plotTimeSeries(axs[n+1], Idata, T, Xlims = [-0.1*Iext, 1.1*Iext])
 
-    fig.savefig(savepath+"/analysis_X0="+str(X0[i]).replace(".","")+"-FHN-A-1.png", bbox_inches="tight")
+    fig.savefig(savepath+"/analysis_X0="+str(X0[i]).replace(" ","")+"_"+savelabel+"-FHN-A-1.png", bbox_inches="tight")
     plt.close()
 
 
@@ -98,35 +99,71 @@ for i in range(len(X0)):
 # PYSINDY RECOVERY #
 ####################
 
+# # ----- training parameters ----- #
+
+# # general
+# X0_train = [np.array([0, 0.15])]
+# I_train = [0, 0.1]
+# # Eta = [0]
+# eta = 0
+
+# # SINDy
+# poly_order = 3          # highest polynomial degree
+# threshold = 0.005       # STLSQ optimizer threshold (should be >= smallest coefficient in model)
+
+# X_train = []
+# for X0i in X0_train:
+#     for Ii in I_train:
+#         fIi = lambda t : model.fConstant(t,Ii)
+#         X_train_i, T = functions.trajectories(fmodel(fIi), X0i, tmesh, method="RK4")
+#         X_train.append(X_train_i.T)
+
+
+
+
+
+
+
+
 # train model for first X0
-model_ps = ps.SINDy()
+poly_order = 3
+threshold = 0.005
+model_ps = ps.SINDy(optimizer=ps.STLSQ(threshold=threshold), feature_library=ps.PolynomialLibrary(degree=poly_order))
+# model_ps = ps.SINDy(feature_library=ps.PolynomialLibrary(degree=poly_order))
+print(Xtraj[0].T)
 model_ps.fit(Xtraj[0].T, t=dt)
 model_ps.print()
 
-assert len(X0) > 1
+# assert len(X0) > 1
 
-Xtraj_comp = model_ps.predict(Xtraj[1].T)
-# Xtraj_ref = model_ps.differentiate(Xtraj[1].T, t=dt)
+X0_test = [np.array([0, 0.2]), np.array([0, 0.25]), np.array([0.5, 0.2])]
+Xtest_ref, _ = functions.trajectories(fmodel(fI), X0_test, tmesh, method="RK4") # list of arrays of ndims x nt
 
-ndims = Xtraj_comp.shape[0]
-fig, axs = plt.subplots(ndims, 1, sharex=True, figsize=(7, 9))
-for i in range(ndims):
-    axs[i].plot(T, Xtraj_comp[:, i], 'k', label='numerical derivative')
-    # axs[i].plot(T, Xtraj_ref[:, i], 'r--', label='model prediction')
-    # axs[i].legend()
-    # axs[i].set(xlabel='t', ylabel='$\dot x_{}$'.format(i))
-fig.show()
+height_ratios = [2]+[1 for i in range(n)]
+fig, axs = plt.subplots(n+1, 1, figsize=(12, 12), height_ratios = height_ratios) #, gridspec_kw={'height_ratios': [8, 4, 4]})
+
+for i in range(len(X0_test)):
+    Xtest_i = model_ps.simulate(X0_test[i], T).T
+
+    functions.plotPhasePlane(axs[0], fmodel(fI), xmesh, ymesh, Xtest_ref[i])
+    functions.plotTimeSeries(axs[1:n+1], Xtest_ref[i], T) #, plot_traj=2)
+    functions.plotTimeSeries(axs[1:n+1], Xtest_i, T, plot_traj=3)
+    # functions.plotTimeSeries(axs[n+1], Idata, T, Xlims = [-0.1*Iext, 1.1*Iext])
+
+fig.savefig(savepath+"/verification-FHN-A-1"+savelabel+".png", bbox_inches="tight")
+plt.close()
 
 
 
 
-# # check
-# t_test_span = (t_test[0], t_test[-1])
-# x_test = solve_ivp(lorenz, t_test_span, x0_test, t_eval=t_test, **integrator_keywords).y.T  
 
-# # Compare SINDy-predicted derivatives with finite difference derivatives
-# print('Model score: %f' % model.score(x_test, t=dt))
 
-# print(models)
+# Xtraj_comp = model_ps.simulate(X0[1], T)
+# fig, axs = plt.subplots(n, 1, sharex=True, figsize=(7, 9))
+# for i in range(n):
+#     axs[i].plot(T, Xtraj_comp[:, i], 'k', label='numerical derivative')
+# fig.savefig(savepath+"/prediction_X0="+str(X0[i]).replace(".","")+"-FHN-A-1.png", bbox_inches="tight")
+# plt.close()
+
 
 

@@ -26,6 +26,8 @@ def plotTimeSeries1d(ax, Xt, T, lab="", xlims=[], ylims=[], plot_traj=1):
         ax.plot(T,Xt,'k.-')
     elif plot_traj == 2:
         ax.plot(T,Xt,'k-')
+    elif plot_traj == 3:
+        ax.plot(T,Xt,'r-')
     else:
         ax.plot(T[-1],Xt[-1],'k.')
     ax.set_xlabel("$t$")
