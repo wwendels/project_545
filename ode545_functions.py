@@ -24,6 +24,10 @@ def trajectories2(modelclass,X0,tmesh,method="RK4"):
 
     return X,T #X is a list!
 
+def addWhiteNoise(x,eta):
+    return x + np.random.normal(loc=0,scale=eta,size=x.shape)
+
+
 
 ##########################
 # GENERAL PLOT FUNCTIONS #
