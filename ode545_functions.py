@@ -3,6 +3,25 @@ import matplotlib.pyplot as plt
 import ode2d_analysis as analysis
 import ode2d_pplane as ode2d
 
+import ode2d_models as model
+
+def functionInputCurrent(fI_lab, Iext, tthres, tmesh, Iref, Pulses):
+
+    if fI_lab == 1: # constant current
+        fI = lambda t : model.fConstant(t,Iext)
+    elif fI_lab == 2: # Heaviside function
+        fI = lambda t : model.fHeaviside(t,Iext,tthres)
+    elif fI_lab == 3: # linear interpolation between given points
+        fI = lambda t : model.fPiecewiseLinear(t,[0,tthres,tmesh[0]],[0,Iext,Iext])
+    elif fI_lab == 4: # pulses of stength Pulses[2] for given time intervals (Pulses[0],Pulses[1])
+        fI = lambda t : model.fPulses(t,Iref,Pulses)
+    else:
+        print("ERROR [ode2d_main]: specify valid option current function fI_lab")
+        exit(1)
+
+    return fI
+
+
 
 def trajectories(modelclass,X0,tmesh,method="RK4"):
     # extracts the states X[t] for each time t involved in the time mesh T
@@ -22,7 +41,7 @@ def trajectories2(modelclass,X0,tmesh,method="RK4"):
     T = np.arange(0,tend+dt,dt)
     X = modelclass.timestepping(X0,dt,tend,method).T
 
-    return X,T #X is a list!
+    return X,T
 
 def addWhiteNoise(x,eta):
     return x + np.random.normal(loc=0,scale=eta,size=x.shape)
@@ -40,7 +59,7 @@ def plotTimeSeries1d(ax, Xt, T, lab="", xlims=[], ylims=[], plot_traj=1):
     elif plot_traj == 2:
         ax.plot(T,Xt,'k-')
     elif plot_traj == 3:
-        ax.plot(T,Xt,'r-')
+        ax.plot(T,Xt,'r-.')
     else:
         ax.plot(T[-1],Xt[-1],'k.')
     ax.set_xlabel("$t$")

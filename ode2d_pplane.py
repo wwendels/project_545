@@ -151,8 +151,8 @@ def eigenvalsEquilibria(modelclass,E,sigfig=2):
         Ji = modelclass.jacobian(E[i])
         # L.append(np.linalg.eigvals(Ji).round(sigfig))
         L.append(np.linalg.eigvals(Ji).round(sigfig))
-        print(E[i])
-        print(L)
+        # print(E[i])
+        # print(L)
 
     L = np.array(L)
 

@@ -126,7 +126,7 @@ def getModel(case):
     elif case == "FHN-A":
 
         xmesh = -0.5, 1.0, 30, 50, "$V$"
-        ymesh = -0.05, 0.2, 30, 50, "$w$"
+        ymesh = -0.05, 0.3, 30, 50, "$w$"
         tmesh = 500.,0.01
         X0 = [np.array([0,0.15])] #, np.array([0,0.2])]
         eqtol = 1e-3
@@ -142,7 +142,7 @@ def getModel(case):
     elif case == "FHN-B":
 
         xmesh = -0.5, 1.0, 30, 50, "$V$"
-        ymesh = -0.05, 0.2, 30, 50, "$w$"
+        ymesh = -0.05, 0.3, 30, 50, "$w$"
         tmesh = 500.,0.01
         X0 = [np.array([0, 0.15]), np.array([0, 0.2])]
         eqtol = 1e-3
